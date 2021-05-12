@@ -1,24 +1,20 @@
 use rand::seq::SliceRandom;
 
-pub struct Deck {
-    pub cards: Vec<u8>
+pub type Deck = Vec<u8>;
+
+pub fn new() -> Deck {
+    return (0..52).collect();
 }
 
-impl Deck {
-    pub fn new() -> Deck {
-        Deck { cards: (0..52).collect() }
-    }
+pub fn shuffle(deck: &mut Deck) {
+    let mut rng = rand::thread_rng();
+    deck.shuffle(&mut rng);
+}
 
-    pub fn shuffle(&mut self) {
-        let mut rng = rand::thread_rng();
-        self.cards.shuffle(&mut rng);
-    }
+pub fn reset(deck: &mut Deck) {
+    *deck = new();
+}
 
-    pub fn draw(&mut self) -> u8 {
-        return self.cards.pop().unwrap();
-    }
-
-    pub fn reset(&mut self) {
-        self.cards = (0..52).collect();
-    }
+pub fn draw_card(deck: &mut Deck) -> u8 {
+    return deck.pop().unwrap();
 }
