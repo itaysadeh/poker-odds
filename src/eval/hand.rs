@@ -1,90 +1,17 @@
 use crate::card;
 
-// TODO fix straight() for low ace
-
-type Board = Vec<u8>;
-type Showdown = (u8, u8, u8, u8, u8);
-
-enum HandType {
-    HIGH            = 0,
-    PAIR            = 1,
-    TWOPAIR         = 2,
-    THREE           = 3,
-    STRAIGHT        = 4,
-    FLUSH           = 5,
-    FULLHOUSE       = 6,
-    FOUR            = 7,
-    STRAIGHTFLUSH   = 8,
+fn count_bits(mut flags: u16) -> usize {
+    let mut count = 0;
+    while flags != 0 {
+        count += flags & 1;
+        flags >>= 1;
+    }
+    return count as usize;
 }
 
-pub struct Hand {
-    hand_type: HandType,
-    cards: Showdown,
-}
+pub type Showdown = (u8, u8, u8, u8, u8);
 
-// expects a vector of 7 cards
-pub fn eval(board: &mut Board) -> Hand {
-    assert_eq!(board.len(), 7);
-
-    let mut mults: [u8; 13] = [0; 13];
-    let mut suits: [u8; 04] = [0; 04];
-    let mut flags: u64 = 0;
-    let mut score: u32 = 0;
-    
-    let (mut has4, mut has3, mut has2) = (0u16, 0u16, 0u16);
-    
-    for card in board.iter() {
-        mults[card::rank(*card) as usize] += 1;
-        suits[card::suit(*card) as usize] += 1;
-        flags |= 1 << card;
-    }
-
-    for (rank, amount) in mults.iter().enumerate() {
-        match *amount {
-            2 => has2 |= (1 << rank) as u16,
-            3 => has3 |= (1 << rank) as u16,
-            4 => has4 |= (1 << rank) as u16,
-            _ => (),
-        }
-    }
-
-    let mut hand = straight_flush(flags);
-    if hand != None {
-        return Hand { hand_type: HandType::STRAIGHTFLUSH,   cards: hand.unwrap() };
-    }
-    hand = four_of_a_kind(flags, has4);
-    if hand != None {
-        return Hand { hand_type: HandType::FOUR,            cards: hand.unwrap() };
-    }
-    hand = full_house(flags, has3, has2);
-    if hand != None {
-        return Hand { hand_type: HandType::FULLHOUSE,       cards: hand.unwrap() };
-    }
-    hand = flush(flags, &suits);
-    if hand != None {
-        return Hand { hand_type: HandType::FLUSH,           cards: hand.unwrap() };
-    }
-    hand = straight(flags);
-    if hand != None {
-        return Hand { hand_type: HandType::STRAIGHT,        cards: hand.unwrap() };
-    }
-    hand = three_of_a_kind(flags, has3);
-    if hand != None {
-        return Hand { hand_type: HandType::THREE,           cards: hand.unwrap() };
-    }
-    hand = two_pair(flags, has2);
-    if hand != None {
-        return Hand { hand_type: HandType::TWOPAIR,         cards: hand.unwrap() };
-    }
-    hand = one_pair(flags, has2);
-    if hand != None {
-        return Hand { hand_type: HandType::PAIR,            cards: hand.unwrap() };
-    }
-    hand = high_card(flags);
-    return Hand { hand_type: HandType::HIGH,                cards: hand.unwrap() };
-}
-
-fn straight_flush(flags: u64) -> Option<Showdown> {
+pub fn straight_flush(flags: u64) -> Option<Showdown> {
     let mask: u64 = 0x8888800000000;
     // 52 - (4 * 4) = 36
     for i in 0..36 {
@@ -102,7 +29,7 @@ fn straight_flush(flags: u64) -> Option<Showdown> {
     return None;
 }
 
-fn four_of_a_kind(mut flags: u64, fours: u16) -> Option<Showdown> {
+pub fn four_of_a_kind(mut flags: u64, fours: u16) -> Option<Showdown> {
     if fours == 0 {
         return None;
     }
@@ -133,7 +60,7 @@ fn four_of_a_kind(mut flags: u64, fours: u16) -> Option<Showdown> {
     ));
 }
 
-fn full_house(flags: u64, mut threes: u16, pairs: u16) -> Option<Showdown> {
+pub fn full_house(flags: u64, mut threes: u16, pairs: u16) -> Option<Showdown> {
     if threes == 0 {
         return None;
     }
@@ -178,7 +105,7 @@ fn full_house(flags: u64, mut threes: u16, pairs: u16) -> Option<Showdown> {
     ));
 }
 
-fn flush(flags: u64, suits: &[u8; 4]) -> Option<Showdown> {
+pub fn flush(flags: u64, suits: &[u8; 4]) -> Option<Showdown> {
     let mut cards: Vec<u8> = Vec::with_capacity(5);
     let mut suit = 0xFF;
     // checks if there's a flush
@@ -206,7 +133,7 @@ fn flush(flags: u64, suits: &[u8; 4]) -> Option<Showdown> {
     ));
 }
 
-fn straight(flags: u64) -> Option<Showdown> {
+pub fn straight(flags: u64) -> Option<Showdown> {
     let mut cards: Vec<u8> = Vec::with_capacity(5);
     let mut rank: u8 = 0xFF;
 
@@ -252,7 +179,7 @@ fn straight(flags: u64) -> Option<Showdown> {
     ));
 }
 
-fn three_of_a_kind(mut flags: u64, threes: u16) -> Option<Showdown> {
+pub fn three_of_a_kind(mut flags: u64, threes: u16) -> Option<Showdown> {
     if threes == 0 {
         return None;
     }
@@ -288,7 +215,7 @@ fn three_of_a_kind(mut flags: u64, threes: u16) -> Option<Showdown> {
     ));
 }
 
-fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
+pub fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
     if pairs == 0 {
         return None;
     }
@@ -327,7 +254,7 @@ fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
     ));
 }
 
-fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
+pub fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
     if pairs == 0 {
         return None;
     }
@@ -363,7 +290,7 @@ fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
     ));
 }
 
-fn high_card(flags: u64) -> Option<Showdown> {
+pub fn high_card(flags: u64) -> Option<Showdown> {
     let mut cards: Vec<u8> = Vec::with_capacity(5);
     for card in (0..52).rev() {
         if cards.len() == 5 {
