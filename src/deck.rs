@@ -2,7 +2,7 @@ use rand::seq::SliceRandom;
 
 pub type Deck = Vec<u8>;
 
-pub fn new() -> Deck {
+pub fn new_deck() -> Deck {
     return (0..52).collect();
 }
 
@@ -12,7 +12,7 @@ pub fn shuffle(deck: &mut Deck) {
 }
 
 pub fn reset(deck: &mut Deck) {
-    *deck = new();
+    *deck = new_deck();
 }
 
 pub fn draw_card(deck: &mut Deck) -> u8 {

@@ -10,9 +10,10 @@ pub struct Hand {
     cards: hand::Showdown,
 }
 
-// expects a vector of 7 cards
-pub fn eval(board: &mut Board) -> Hand {
-    assert_eq!(board.len(), 7);
+// expects a vector of 5 to 7 cards
+pub fn get_showdown(board: &mut Board) -> Hand {
+    more_asserts::assert_lt!(board.len(), 8);
+    more_asserts::assert_ge!(board.len(), 4);
 
     let mut mults: [u8; 13] = [0; 13];
     let mut suits: [u8; 04] = [0; 04];
@@ -40,39 +41,63 @@ pub fn eval(board: &mut Board) -> Hand {
     let mut hand_type = 8;
 
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
     hand = hand::four_of_a_kind(flags, has4);
     hand_type -= 1;
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
     hand = hand::full_house(flags, has3, has2);
     hand_type -= 1;
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
+    hand_type -= 1;
     hand = hand::flush(flags, &suits);
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
+    hand_type -= 1;
     hand = hand::straight(flags);
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
+    hand_type -= 1;
     hand = hand::three_of_a_kind(flags, has3);
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
+    hand_type -= 1;
     hand = hand::two_pair(flags, has2);
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
+    hand_type -= 1;
     hand = hand::one_pair(flags, has2);
     if hand != None {
-        return Hand { hand_type: hand_type, cards: hand.unwrap() };
+        return Hand {
+            hand_type: hand_type, cards: hand.unwrap()
+        };
     }
+    hand_type -= 1;
     hand = hand::high_card(flags);
-    return Hand { hand_type: hand_type, cards: hand.unwrap() };
+    return Hand {
+        hand_type: hand_type, cards: hand.unwrap()
+    };
 }
 
