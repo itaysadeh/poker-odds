@@ -1,7 +1,7 @@
 use poker_odds::eval;
 
 fn main() {
-    let mut cards: Vec<u8> = vec![51, 50, 4, 6, 21, 22, 23];
+    let mut cards: Vec<u8> = vec![0, 1, 6, 4, 5, 22, 21];
 
-    eval::evaluator::get_showdown(&mut cards);
+    eval::evaluator::test(&mut cards);
 }

@@ -1,14 +1,22 @@
 use crate::card;
 
-// returns n cards with the highest rank
-fn find_kickers(flags: &u64, amount: usize) -> Vec<u8> {
+// a player's 5 best cards from the board
+pub type Showdown = (u8, u8, u8, u8, u8);
+//
+pub struct Hand {
+    pub hand_type: u8,
+    pub cards: Showdown,
+}
+
+// returns {anmount} cards with the highest ranks
+fn find_kickers(flags: u64, amount: usize) -> Vec<u8> {
     let mut kickers: Vec<u8> = Vec::with_capacity(amount);
     for i in (0..52).rev() {
-        if kickers.len() == amount {
-            break; 
-        }
-        if (flags & (1 << i)) != 0 {
+        if (flags & mask_c(i)) != 0 {
             kickers.push(i);
+            if kickers.len() == amount {
+                break;
+            }
         }
     }
     assert_eq!(kickers.len(), amount);
@@ -23,67 +31,77 @@ fn count_bits(mut flags: u8) -> usize {
     }
     return count as usize;
 }
-
-fn get_suits_3(flags: u8) -> [u8; 3] {
+// 4 ways to choose 3 bits in a nibble
+fn get_ind_3(flags: u8, rank: u8) -> [u8; 3] {
     match flags {
-        7  => [2, 1, 0],
-        11 => [3, 1, 0],
-        13 => [3, 2, 0],
-        14 => [3, 2, 1],
+        14 => [card::ind(rank, 3), card::ind(rank, 2), card::ind(rank, 1)],
+        13 => [card::ind(rank, 3), card::ind(rank, 2), card::ind(rank, 0)],
+        11 => [card::ind(rank, 3), card::ind(rank, 1), card::ind(rank, 0)],
+        _ =>  [card::ind(rank, 2), card::ind(rank, 1), card::ind(rank, 0)],
+    }
+}
+// 6 ways to choose 2 bits in a nibble
+fn get_ind_2(flags: u8, rank: u8) -> [u8; 2] {
+    match flags {
+        12 => [card::ind(rank, 3), card::ind(rank, 2)],
+        10 => [card::ind(rank, 3), card::ind(rank, 1)],
+        9 =>  [card::ind(rank, 3), card::ind(rank, 0)],
+        6 =>  [card::ind(rank, 2), card::ind(rank, 1)],
+        5 =>  [card::ind(rank, 2), card::ind(rank, 0)],
+        _ =>  [card::ind(rank, 1), card::ind(rank, 0)],
     }
 }
 
-fn get_suits_2(flags: u8) -> [u8; 2] {
-    match flags {
-        3  => [1, 0],
-        5  => [2, 0],
-        6  => [2, 1],
-        9  => [3, 0],
-        10 => [3, 1],
-        12 => [3, 2],
-    }
-}
-
-fn mask_card(card: u8) -> u64 {
+fn mask_c(card: u8) -> u64 {
     return 1 << card;
 }
 
-fn mask_rank(rank: u8) -> u64 {
+fn mask_r(rank: u8) -> u64 {
     return 0xF << rank * 4;
 }
 
-pub type Showdown = (u8, u8, u8, u8, u8);
+// all functions return either a Showdown or None
+// if the type can't be formed from the board (flags)
 
 pub fn straight_flush(flags: u64) -> Option<Showdown> {
     let mask: u64 = 0x8888800000000;
     for i in 0..36 {
         if flags & (mask >> i) == (mask >> i) {
-            return Some(( 51-i, 51-i-4, 51-i-8, 51-i-12, 51-i-16 ));
+            return Some((51 - i, 47 - i, 43 - i, 39 - i, 35 - i));
         }
     }
     let mask_low_ace: u64 = 0x8000000008888;
     for s in 0..4 {
         if flags & (mask_low_ace >> s) == (mask_low_ace >> s) {
-            return Some(( 15-s, 15-s-4, 15-s-8, 15-s-12, 51-s ));
+            return Some((51 - s, 15 - s, 11 - s, 7 - s, 3 - s));
         }
     }
     return None;
 }
-
 pub fn four_of_a_kind(mut flags: u64) -> Option<Showdown> {
-    let mut rank4: u8 = 0xFF;
+    let mut r4: u8 = 0xFF;
     for r in (0..13).rev() {
-        if flags & (mask_rank(r)) == mask_rank(r) {
-            flags &= !mask_rank(r);
+        if flags & (mask_r(r)) == mask_r(r) {
+            r4 = r;
+            flags &= !mask_r(r);
             break;
         }
     }
-    if rank4 != 0xFF {
-        let kicker = find_kickers(&flags, 1);
-        return Some((
-            card::ind(rank4, 3), card::ind(rank4, 2),
-            card::ind(rank4, 1), card::ind(rank4, 0), kicker[0],
-        ));
+    if r4 != 0xFF {
+        let kicker = find_kickers(flags, 1);
+        if kicker[0] < r4 {
+            return Some((
+                card::ind(r4, 3), card::ind(r4, 2),
+                card::ind(r4, 1), card::ind(r4, 0),
+                kicker[0],
+            ));
+        } else {
+            return Some((
+                kicker[0],
+                card::ind(r4, 3), card::ind(r4, 2),
+                card::ind(r4, 1), card::ind(r4, 0),
+            ));
+        }
     }
     return None;
 }
@@ -91,137 +109,113 @@ pub fn four_of_a_kind(mut flags: u64) -> Option<Showdown> {
 pub fn full_house(mut flags: u64) -> Option<Showdown> {
     let mut cards3: [u8; 3] = [0xFF; 3];
     let mut cards2: [u8; 2] = [0xFF; 2];
-    let (mut has3, mut has2) = (false, false);
+
+    let (mut r3, mut r2) = (0xFF, 0xFF);
 
     for r in (0..13).rev() {
-        if count_bits((0xF & (flags >> r*4)) as u8) == 3 {
-            let suits = get_suits_3((0xF & (flags >> r*4)) as u8);
-            has3 = true;
-            cards3[0] = card::ind(r, suits[0]);
-            cards3[1] = card::ind(r, suits[1]);
-            cards3[2] = card::ind(r, suits[2]);
-            flags &= !(mask_card(cards3[0]) | mask_card(cards3[1]) | mask_card(cards3[2]));
+        let rflags = (0xF & (flags >> r * 4)) as u8;
+        if count_bits(rflags) == 3 {
+            cards3 = get_ind_3(rflags, r);
+            for i in 0..3 {
+                flags &= !(mask_c(cards3[i]));
+            }
+            r3 = r;
             break;
         }
     }
     for r in (0..13).rev() {
-        if count_bits((0xF & (flags >> r*4)) as u8) == 2 {
-            let suits = get_suits_3((0xF & (flags >> r*4)) as u8);
-            cards2[0] = card::ind(r, suits[0]);
-            cards2[1] = card::ind(r, suits[1]);
-            flags &= !(mask_card(cards2[0]) | mask_card(cards2[1]));
+        let rflags = (0xF & (flags >> r * 4)) as u8;
+        if count_bits(rflags) == 2 {
+            cards2 = get_ind_2(rflags, r);
+            r2 = r;
+            break;
         }
     }
-
-    return Some((
-        cards3[0], cards3[1], cards3[2], cards2[0], cards2[1],
-    ));
+    if r3 != 0xFF && r2 != 0xFF {
+        if r3 < r2 {
+            return Some((cards2[0], cards2[1], cards3[0], cards3[1], cards3[2]));
+        } else {
+            return Some((cards3[0], cards3[1], cards3[2], cards2[0], cards2[1]));
+        }
+    }
+    return None;
 }
 
-pub fn flush(flags: u64, suits: &[u8; 4]) -> Option<Showdown> {
+pub fn flush(flags: u64) -> Option<Showdown> {
     let mut cards: Vec<u8> = Vec::with_capacity(5);
-    let mut suit = 0xFF;
-    // checks if there's a flush
-    for s in 0..4 {
-        if suits[s] >= 5 {
-            suit = s as u8;
-        }
-    }
-    if suit == 0xFF {
-        return None;
-    }
-    // finds the cards with the highest ranks that form the hand
-    for rank in (0..13).rev() {
-        if (flags & (1 << card::ind(rank, suit))) != 0 {
-            cards.push(card::ind(rank, suit));
-        }
-        if cards.len() == 5 {
-            break;
-        }
-    }
-    assert_eq!(cards.len(), 5);
 
-    return Some((
-        cards[0], cards[1], cards[2], cards[3], cards[4]
-    ));
+    for s in (0..4).rev() {
+        for r in (0..13).rev() {
+            let ind: u8 = card::ind(r, s);
+            if (flags & mask_c(ind)) != 0 {
+                cards.push(ind);
+                if cards.len() == 5 {
+                    return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
+                }
+            }
+        }
+        cards.clear();
+    }
+    return None;
 }
 
 pub fn straight(flags: u64) -> Option<Showdown> {
-    let mut cards: Vec<u8> = Vec::with_capacity(5);
-    let mut rank: u8 = 0xFF;
+    // let mut cards: Vec<u8> = Vec::with_capacity(5);
 
-    // checks if there's a straight and finds it's rank
-    for r in (0..=8).rev() {
-        if (flags & (0xF << r + 00)) != 0 &&
-           (flags & (0xF << r + 04)) != 0 &&
-           (flags & (0xF << r + 08)) != 0 &&
-           (flags & (0xF << r + 12)) != 0 &&
-           (flags & (0xF << r + 16)) != 0 {
-            rank = r + 4;
-            break;
-        }
-    }
-    // checks for low ace straight
-    if rank == 0xFF {
-        if (flags & 0xF000000000000) != 0 &&
-           (flags & 0x000000000F000) != 0 &&
-           (flags & 0x0000000000F00) != 0 &&
-           (flags & 0x00000000000F0) != 0 &&
-           (flags & 0x000000000000F) != 0 {
-            rank = 3;
-        }
-        else {
-            return None;
-        }
-    }
-    assert_ne!(rank, 0xFF);
-    // finds the cards that form the hand
-    for r in (rank-4..=rank).rev() {
-        if cards.len() == 5 {
-            break;
-        }
-        for s in (0..4).rev() {
-            if (flags & (1 << card::ind(r, s))) != 0 {
-                cards.push(card::ind(r, s));
-                break;
-            }
-        }
-    }
-    return Some((
-        cards[0], cards[1], cards[2], cards[3], cards[4]
-    ));
+    // // checks if there's a straight and finds it's rank
+    // for r in 0..13 {
+    //     let mut ranks: u8 = 0;
+    //     for s in 0..4 {
+    //         if (flags & (mask_c(card::ind(r, s)))) != 0 {
+    //             ranks |= ()
+    //         }
+    //     }
+    //     if (flags & mask_r(r)) != 0 {
+
+    //     }
+    // }
+    // // checks for low ace straight
+    // if rank == 0xFF {
+    //     if (flags & 0xF000000000000) != 0
+    //         && (flags & 0x000000000F000) != 0
+    //         && (flags & 0x0000000000F00) != 0
+    //         && (flags & 0x00000000000F0) != 0
+    //         && (flags & 0x000000000000F) != 0
+    //     {
+    //         rank = 3;
+    //     } else {
+    //         return None;
+    //     }
+    // }
+    // assert_ne!(rank, 0xFF);
+    // // finds the cards that form the hand
+    // for r in (rank - 4..=rank).rev() {
+    //     if cards.len() == 5 {
+    //         break;
+    //     }
+    //     for s in (0..4).rev() {
+    //         if (flags & (1 << card::ind(r, s))) != 0 {
+    //             cards.push(card::ind(r, s));
+    //             break;
+    //         }
+    //     }
+    // }
+    // return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
+    return None;
 }
 
-pub fn three_of_a_kind(mut flags: u64, threes: u16) -> Option<Showdown> {
-    if threes == 0 {
-        return None;
-    }
-
-    let mut cards3: Vec<u8> = Vec::with_capacity(3);
-    let mut rank3: u8 = 0xFF;
-
-    // finds the rank of the hand
+pub fn three_of_a_kind(mut flags: u64) -> Option<Showdown> {
     for r in (0..13).rev() {
-        if (threes & (1 << r)) != 0 {
-            rank3 = r;
-            break;
+        let rflags = (0xF & (flags >> r * 4)) as u8;
+        if count_bits(rflags) == 3 {
+            let cards = get_ind_3(rflags, r);
+            for i in 0..3 {
+                flags &= !(mask_c(cards[i]));
+            }
+            let kickers = find_kickers(flags, 2);
         }
     }
-    // finds the 3 cards that form the hand
-    for s in (0..4).rev() {
-        if cards3.len() == 3 { break; }
-        let ind: u8 = card::ind(rank3, s);
-        if (flags & (1 << ind)) != 0 {
-            cards3.push(ind);
-            flags &= !(1 << ind);
-        }
-    }
-    // finds the two kickers with the highest rank
-    let kickers = find_kickers(&flags, 2);
-
-    return Some((
-        cards3[0], cards3[1], cards3[2], kickers[0], kickers[1]
-    ));
+    return None;
 }
 
 pub fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
@@ -234,7 +228,9 @@ pub fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
 
     // finds the pairs with the highest rank
     for r in (0..13).rev() {
-        if cards.len() == 4 { break; }
+        if cards.len() == 4 {
+            break;
+        }
         if (pairs & (1 << r)) != 0 {
             // found a pair with a rank of r
             pair_amount += 1;
@@ -247,7 +243,9 @@ pub fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
             }
         }
     }
-    if pair_amount < 2 { return None; }
+    if pair_amount < 2 {
+        return None;
+    }
     assert_eq!(cards.len(), 4);
     // finds the highest kicker
     let mut kicker: u8 = 0xFF;
@@ -258,9 +256,7 @@ pub fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
         }
     }
     assert_eq!(cards.len(), 5);
-    return Some((
-        cards[0], cards[1], cards[2], cards[3], kicker
-    ));
+    return Some((cards[0], cards[1], cards[2], cards[3], kicker));
 }
 
 pub fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
@@ -294,9 +290,7 @@ pub fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
         }
     }
     assert_eq!(cards.len(), 5);
-    return Some((
-        cards[0], cards[1], cards[2], cards[3], cards[4]
-    ));
+    return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
 }
 
 pub fn high_card(flags: u64) -> Option<Showdown> {
@@ -309,7 +303,5 @@ pub fn high_card(flags: u64) -> Option<Showdown> {
             cards.push(card);
         }
     }
-    return Some((
-        cards[0], cards[1], cards[2], cards[3], cards[4]
-    ));
+    return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
 }
