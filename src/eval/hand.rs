@@ -1,14 +1,14 @@
 use crate::card;
 
-// a player's 5 best cards from the board
-pub type Showdown = (u8, u8, u8, u8, u8);
+/// a player's 5 best cards from the board
+pub type Showdown = Vec<u8>;
 //
 pub struct Hand {
     pub hand_type: u8,
     pub cards: Showdown,
 }
 
-// returns {anmount} cards with the highest ranks
+/// returns {anmount} cards with the highest ranks
 fn find_kickers(flags: u64, amount: usize) -> Vec<u8> {
     let mut kickers: Vec<u8> = Vec::with_capacity(amount);
     for i in (0..52).rev() {
@@ -32,23 +32,23 @@ fn count_bits(mut flags: u8) -> usize {
     return count as usize;
 }
 // 4 ways to choose 3 bits in a nibble
-fn get_ind_3(flags: u8, rank: u8) -> [u8; 3] {
+fn get_ind_3(flags: u8, rank: u8) -> Vec<u8> {
     match flags {
-        14 => [card::ind(rank, 3), card::ind(rank, 2), card::ind(rank, 1)],
-        13 => [card::ind(rank, 3), card::ind(rank, 2), card::ind(rank, 0)],
-        11 => [card::ind(rank, 3), card::ind(rank, 1), card::ind(rank, 0)],
-        _ =>  [card::ind(rank, 2), card::ind(rank, 1), card::ind(rank, 0)],
+        14 => vec![card::ind(rank, 3), card::ind(rank, 2), card::ind(rank, 1)],
+        13 => vec![card::ind(rank, 3), card::ind(rank, 2), card::ind(rank, 0)],
+        11 => vec![card::ind(rank, 3), card::ind(rank, 1), card::ind(rank, 0)],
+        7  => vec![card::ind(rank, 2), card::ind(rank, 1), card::ind(rank, 0)],
     }
 }
 // 6 ways to choose 2 bits in a nibble
-fn get_ind_2(flags: u8, rank: u8) -> [u8; 2] {
+fn get_ind_2(flags: u8, rank: u8) -> Vec<u8> {
     match flags {
-        12 => [card::ind(rank, 3), card::ind(rank, 2)],
-        10 => [card::ind(rank, 3), card::ind(rank, 1)],
-        9 =>  [card::ind(rank, 3), card::ind(rank, 0)],
-        6 =>  [card::ind(rank, 2), card::ind(rank, 1)],
-        5 =>  [card::ind(rank, 2), card::ind(rank, 0)],
-        _ =>  [card::ind(rank, 1), card::ind(rank, 0)],
+        12 => vec![card::ind(rank, 3), card::ind(rank, 2)],
+        10 => vec![card::ind(rank, 3), card::ind(rank, 1)],
+        9  => vec![card::ind(rank, 3), card::ind(rank, 0)],
+        6  => vec![card::ind(rank, 2), card::ind(rank, 1)],
+        5  => vec![card::ind(rank, 2), card::ind(rank, 0)],
+        3  => vec![card::ind(rank, 1), card::ind(rank, 0)],
     }
 }
 
@@ -67,13 +67,13 @@ pub fn straight_flush(flags: u64) -> Option<Showdown> {
     let mask: u64 = 0x8888800000000;
     for i in 0..36 {
         if flags & (mask >> i) == (mask >> i) {
-            return Some((51 - i, 47 - i, 43 - i, 39 - i, 35 - i));
+            return Some(vec![51 - i, 47 - i, 43 - i, 39 - i, 35 - i]);
         }
     }
-    let mask_low_ace: u64 = 0x8000000008888;
+    let mask: u64 = 0x8000000008888;
     for s in 0..4 {
-        if flags & (mask_low_ace >> s) == (mask_low_ace >> s) {
-            return Some((51 - s, 15 - s, 11 - s, 7 - s, 3 - s));
+        if flags & (mask >> s) == (mask >> s) {
+            return Some(vec![51 - s, 15 - s, 11 - s, 7 - s, 3 - s]);
         }
     }
     return None;
@@ -82,62 +82,48 @@ pub fn four_of_a_kind(mut flags: u64) -> Option<Showdown> {
     let mut r4: u8 = 0xFF;
     for r in (0..13).rev() {
         if flags & (mask_r(r)) == mask_r(r) {
-            r4 = r;
+            r4 = r * 4;
             flags &= !mask_r(r);
             break;
         }
     }
-    if r4 != 0xFF {
-        let kicker = find_kickers(flags, 1);
-        if kicker[0] < r4 {
-            return Some((
-                card::ind(r4, 3), card::ind(r4, 2),
-                card::ind(r4, 1), card::ind(r4, 0),
-                kicker[0],
-            ));
-        } else {
-            return Some((
-                kicker[0],
-                card::ind(r4, 3), card::ind(r4, 2),
-                card::ind(r4, 1), card::ind(r4, 0),
-            ));
-        }
+    if r4 == 0xFF {
+        return None;
     }
-    return None;
+    let kickers = find_kickers(flags, 1);
+    let cards = vec![kickers[0], r4 + 3, r4 + 2, r4 + 1, r4 + 0];
+    cards.sort_unstable();
+    return Some(cards);
 }
 
 pub fn full_house(mut flags: u64) -> Option<Showdown> {
-    let mut cards3: [u8; 3] = [0xFF; 3];
-    let mut cards2: [u8; 2] = [0xFF; 2];
-
-    let (mut r3, mut r2) = (0xFF, 0xFF);
+    let mut cards = Vec::with_capacity(5);
 
     for r in (0..13).rev() {
         let rflags = (0xF & (flags >> r * 4)) as u8;
         if count_bits(rflags) == 3 {
-            cards3 = get_ind_3(rflags, r);
+            cards.extend(get_ind_3(rflags, r));
             for i in 0..3 {
-                flags &= !(mask_c(cards3[i]));
+                flags &= !(mask_c(cards[i]));
             }
-            r3 = r;
             break;
         }
     }
-    for r in (0..13).rev() {
-        let rflags = (0xF & (flags >> r * 4)) as u8;
-        if count_bits(rflags) == 2 {
-            cards2 = get_ind_2(rflags, r);
-            r2 = r;
-            break;
-        }
-    }
-    if r3 != 0xFF && r2 != 0xFF {
-        if r3 < r2 {
-            return Some((cards2[0], cards2[1], cards3[0], cards3[1], cards3[2]));
-        } else {
-            return Some((cards3[0], cards3[1], cards3[2], cards2[0], cards2[1]));
-        }
-    }
+    // for r in (0..13).rev() {
+    //     let rflags = (0xF & (flags >> r * 4)) as u8;
+    //     if count_bits(rflags) == 2 {
+    //         //cards2 = get_ind_2(rflags, r);
+    //         //r2 = r;
+    //         break;
+    //     }
+    // }
+    // if r3 != 0xFF && r2 != 0xFF {
+    //     if r3 < r2 {
+    //         return Some((cards2[0], cards2[1], cards3[0], cards3[1], cards3[2]));
+    //     } else {
+    //         return Some((cards3[0], cards3[1], cards3[2], cards2[0], cards2[1]));
+    //     }
+    // }
     return None;
 }
 
@@ -150,7 +136,7 @@ pub fn flush(flags: u64) -> Option<Showdown> {
             if (flags & mask_c(ind)) != 0 {
                 cards.push(ind);
                 if cards.len() == 5 {
-                    return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
+                    //return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
                 }
             }
         }
@@ -209,10 +195,9 @@ pub fn three_of_a_kind(mut flags: u64) -> Option<Showdown> {
         let rflags = (0xF & (flags >> r * 4)) as u8;
         if count_bits(rflags) == 3 {
             let cards = get_ind_3(rflags, r);
-            for i in 0..3 {
-                flags &= !(mask_c(cards[i]));
-            }
+            flags &= !(mask_c(cards[0]) | mask_c(cards[1]) | mask_c(cards[2]));
             let kickers = find_kickers(flags, 2);
+            
         }
     }
     return None;
@@ -256,7 +241,8 @@ pub fn two_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
         }
     }
     assert_eq!(cards.len(), 5);
-    return Some((cards[0], cards[1], cards[2], cards[3], kicker));
+    return None;
+    //return Some((cards[0], cards[1], cards[2], cards[3], kicker));
 }
 
 pub fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
@@ -290,7 +276,8 @@ pub fn one_pair(mut flags: u64, pairs: u16) -> Option<Showdown> {
         }
     }
     assert_eq!(cards.len(), 5);
-    return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
+    return None;
+    //return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
 }
 
 pub fn high_card(flags: u64) -> Option<Showdown> {
@@ -303,5 +290,6 @@ pub fn high_card(flags: u64) -> Option<Showdown> {
             cards.push(card);
         }
     }
-    return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
+    return None;
+    //return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
 }

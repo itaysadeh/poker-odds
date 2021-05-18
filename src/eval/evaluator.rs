@@ -18,9 +18,6 @@ pub fn get_showdown(board: &mut Board) -> hand::Hand {
     more_asserts::assert_ge!(board.len(), 4);
 
     let mut flags: u64 = 0;
-    let mut score: u32 = 0;
-
-    let (mut has4, mut has3, mut has2) = (0u16, 0u16, 0u16);
 
     for card in board.iter() {
         flags |= 1 << card;
