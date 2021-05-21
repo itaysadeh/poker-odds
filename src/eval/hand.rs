@@ -2,13 +2,13 @@ use crate::card;
 
 /// a player's 5 best cards from the board
 pub type Showdown = Vec<u8>;
-//
+/// hand type and the 5 cards that form the hand
 pub struct Hand {
     pub hand_type: u8,
     pub cards: Showdown,
 }
 
-/// returns {anmount} cards with the highest ranks
+/// returns `anmount` cards with the highest ranks from `flags`
 fn find_kickers(flags: u64, amount: usize) -> Vec<u8> {
     let mut kickers: Vec<u8> = Vec::with_capacity(amount);
     for i in (0..52).rev() {
@@ -49,6 +49,7 @@ fn get_ind_2(flags: u8, rank: u8) -> Vec<u8> {
         6  => vec![card::ind(rank, 2), card::ind(rank, 1)],
         5  => vec![card::ind(rank, 2), card::ind(rank, 0)],
         3  => vec![card::ind(rank, 1), card::ind(rank, 0)],
+        _  => get_ind_3(flags, rank),
     }
 }
 
@@ -70,6 +71,7 @@ pub fn straight_flush(flags: u64) -> Option<Showdown> {
             return Some(vec![51 - i, 47 - i, 43 - i, 39 - i, 35 - i]);
         }
     }
+    // checks for ace low (5 4 3 2 A)
     let mask: u64 = 0x8000000008888;
     for s in 0..4 {
         if flags & (mask >> s) == (mask >> s) {
@@ -109,21 +111,20 @@ pub fn full_house(mut flags: u64) -> Option<Showdown> {
             break;
         }
     }
-    // for r in (0..13).rev() {
-    //     let rflags = (0xF & (flags >> r * 4)) as u8;
-    //     if count_bits(rflags) == 2 {
-    //         //cards2 = get_ind_2(rflags, r);
-    //         //r2 = r;
-    //         break;
-    //     }
-    // }
-    // if r3 != 0xFF && r2 != 0xFF {
-    //     if r3 < r2 {
-    //         return Some((cards2[0], cards2[1], cards3[0], cards3[1], cards3[2]));
-    //     } else {
-    //         return Some((cards3[0], cards3[1], cards3[2], cards2[0], cards2[1]));
-    //     }
-    // }
+    for r in (0..13).rev() {
+        let rflags = (0xF & (flags >> r * 4)) as u8;
+        if count_bits(rflags) >= 2 {
+            cards.extend(get_ind_2(rflags, r));
+            break;
+        }
+    }
+    if cards.len() == 6 {
+        cards.pop();
+    }
+    if cards.len() == 5 {
+        cards.sort_unstable();
+        return Some(cards);
+    }
     return None;
 }
 
@@ -136,7 +137,7 @@ pub fn flush(flags: u64) -> Option<Showdown> {
             if (flags & mask_c(ind)) != 0 {
                 cards.push(ind);
                 if cards.len() == 5 {
-                    //return Some((cards[0], cards[1], cards[2], cards[3], cards[4]));
+                    return Some(cards);
                 }
             }
         }

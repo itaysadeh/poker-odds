@@ -73,7 +73,7 @@ pub fn get_showdown(board: &mut Board) -> hand::Hand {
         };
     }
     hand_type -= 1;
-    hand = hand::two_pair(flags, has2);
+    hand = hand::two_pair(flags);
     if hand != None {
         return hand::Hand {
             hand_type: hand_type,
@@ -81,7 +81,7 @@ pub fn get_showdown(board: &mut Board) -> hand::Hand {
         };
     }
     hand_type -= 1;
-    hand = hand::one_pair(flags, has2);
+    hand = hand::one_pair(flags);
     if hand != None {
         return hand::Hand {
             hand_type: hand_type,
