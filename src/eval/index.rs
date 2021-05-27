@@ -21,6 +21,9 @@ fn nck(n: usize, k: usize) -> usize {
 // always expects the combination to be in an ascending order
 pub fn ind_nck(comb: &Vec<u8>) -> usize {
     let k = comb.len();
+    if k < 1 {
+        return 0;
+    }
 
     let mut rank = 0;
     for i in (1..=k).rev() {
