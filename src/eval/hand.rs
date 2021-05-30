@@ -3,8 +3,8 @@ use crate::eval::index;
 
 /// hand type and the 5 cards that form the hand
 pub struct Hand {
-    pub hand_type: u8,
-    pub hand_rank: u8,
+    pub htype: u8,
+    pub hrank: u8,
     pub kickers: Vec<u8>,
 }
 
@@ -30,15 +30,16 @@ pub fn cards_to_boardarr(cards: &Vec<u8>) -> BoardArr {
 fn straight_flush(board: &BoardArr) -> Option<Hand> {
     for r in (4..14).rev() {
         for s in 0..4 {
-            if board[s][r]
-                && board[s][r - 1]
-                && board[s][r - 2]
-                && board[s][r - 3]
-                && board[s][r - 4]
+            if 
+                board[s][r-0] &&
+                board[s][r-1] &&
+                board[s][r-2] &&
+                board[s][r-3] &&
+                board[s][r-4]
             {
                 return Some(Hand {
-                    hand_type: 8,
-                    hand_rank: (r - 1) as u8,
+                    htype: 8,
+                    hrank: (r - 1) as u8,
                     kickers: vec![],
                 });
             }
@@ -63,8 +64,8 @@ fn four_of_a_kind(board: &BoardArr) -> Option<Hand> {
             if board[0][r] || board[1][r] || board[2][r] || board[3][r] {
                 kickers.push((r - 1) as u8);
                 return Some(Hand {
-                    hand_type: 7,
-                    hand_rank: rank,
+                    htype: 7,
+                    hrank: rank,
                     kickers: kickers,
                 });
             }
@@ -78,7 +79,11 @@ fn full_house(board: &BoardArr) -> Option<Hand> {
 
     for r in (1..14).rev() {
         let count: u8 =
-            board[0][r] as u8 + board[1][r] as u8 + board[2][r] as u8 + board[3][r] as u8;
+            board[0][r] as u8 +
+            board[1][r] as u8 +
+            board[2][r] as u8 +
+            board[3][r] as u8;
+
         if count == 3 {
             rank = (r - 1) as u8;
         }
@@ -89,12 +94,16 @@ fn full_house(board: &BoardArr) -> Option<Hand> {
 
         for r in (1..14).rev() {
             let count: u8 =
-                board[0][r] as u8 + board[1][r] as u8 + board[2][r] as u8 + board[3][r] as u8;
+                board[0][r] as u8 +
+                board[1][r] as u8 +
+                board[2][r] as u8 +
+                board[3][r] as u8;
+                
             if r != (rank + 1).into() && count >= 2 {
                 kickers.push((r - 1) as u8);
                 return Some(Hand {
-                    hand_type: 6,
-                    hand_rank: rank,
+                    htype: 6,
+                    hrank: rank,
                     kickers: kickers,
                 });
             }
@@ -112,9 +121,10 @@ fn flush(board: &BoardArr) -> Option<Hand> {
                 kickers.push((r - 1) as u8);
                 if kickers.len() == 5 {
                     kickers.reverse();
+
                     return Some(Hand {
-                        hand_type: 5,
-                        hand_rank: 0,
+                        htype: 5,
+                        hrank: 0,
                         kickers: kickers,
                     });
                 }
@@ -127,15 +137,16 @@ fn flush(board: &BoardArr) -> Option<Hand> {
 
 fn straight(board: &BoardArr) -> Option<Hand> {
     for r in (4..14).rev() {
-        if (board[0][r - 0] || board[1][r - 0] || board[2][r - 0] || board[3][r - 0])
-            && (board[0][r - 1] || board[1][r - 1] || board[2][r - 1] || board[3][r - 1])
-            && (board[0][r - 2] || board[1][r - 2] || board[2][r - 2] || board[3][r - 2])
-            && (board[0][r - 3] || board[1][r - 3] || board[2][r - 3] || board[3][r - 3])
-            && (board[0][r - 4] || board[1][r - 4] || board[2][r - 4] || board[3][r - 4])
+        if 
+            (board[0][r-0] || board[1][r-0] || board[2][r-0] || board[3][r-0]) &&
+            (board[0][r-1] || board[1][r-1] || board[2][r-1] || board[3][r-1]) &&
+            (board[0][r-2] || board[1][r-2] || board[2][r-2] || board[3][r-2]) &&
+            (board[0][r-3] || board[1][r-3] || board[2][r-3] || board[3][r-3]) &&
+            (board[0][r-4] || board[1][r-4] || board[2][r-4] || board[3][r-4])
         {
             return Some(Hand {
-                hand_type: 4,
-                hand_rank: (r - 1) as u8,
+                htype: 4,
+                hrank: (r - 1) as u8,
                 kickers: vec![],
             });
         }
@@ -148,7 +159,10 @@ fn three_of_a_kind(board: &BoardArr) -> Option<Hand> {
 
     for r in (1..14).rev() {
         let count: u8 =
-            board[0][r] as u8 + board[1][r] as u8 + board[2][r] as u8 + board[3][r] as u8;
+            board[0][r] as u8 +
+            board[1][r] as u8 +
+            board[2][r] as u8 +
+            board[3][r] as u8;
         if count == 3 {
             rank = (r - 1) as u8;
         }
@@ -157,13 +171,17 @@ fn three_of_a_kind(board: &BoardArr) -> Option<Hand> {
     if rank != 0xFF {
         let mut kickers: Vec<u8> = Vec::with_capacity(2);
         for r in (1..14).rev() {
-            if (r - 1) as u8 != rank && (board[0][r] || board[1][r] || board[2][r] || board[3][r]) {
+            if (r - 1) as u8 != rank &&
+                board[0][r] || board[1][r] ||
+                board[2][r] || board[3][r]
+            {
                 kickers.push((r - 1) as u8);
                 if kickers.len() == 2 {
                     kickers.reverse();
+
                     return Some(Hand {
-                        hand_type: 3,
-                        hand_rank: rank,
+                        htype: 3,
+                        hrank: rank,
                         kickers: kickers,
                     });
                 }
@@ -178,7 +196,10 @@ fn two_pair(board: &BoardArr) -> Option<Hand> {
 
     for r in (1..14).rev() {
         let count: u8 =
-            board[0][r] as u8 + board[1][r] as u8 + board[2][r] as u8 + board[3][r] as u8;
+            board[0][r] as u8 +
+            board[1][r] as u8 +
+            board[2][r] as u8 +
+            board[3][r] as u8;
         if count == 2 {
             pairs.push((r - 1) as u8);
             if pairs.len() == 2 {
@@ -189,14 +210,14 @@ fn two_pair(board: &BoardArr) -> Option<Hand> {
 
     if pairs.len() == 2 {
         for r in (1..14).rev() {
-            if (r - 1) as u8 != pairs[0]
-                && (r - 1) as u8 != pairs[1]
-                && (board[0][r] || board[1][r] || board[2][r] || board[3][r])
+            if (r - 1) as u8 != pairs[0] && (r - 1) as u8 != pairs[1] &&
+                board[0][r] || board[1][r] || board[2][r] || board[3][r]
             {
                 pairs.reverse();
+
                 return Some(Hand {
-                    hand_type: 2,
-                    hand_rank: index::ind_nck(&pairs) as u8,
+                    htype: 2,
+                    hrank: index::ind_nck(&pairs) as u8,
                     kickers: vec![(r - 1) as u8],
                 });
             }
@@ -210,7 +231,10 @@ fn pair(board: &BoardArr) -> Option<Hand> {
 
     for r in (1..14).rev() {
         let count: u8 =
-            board[0][r] as u8 + board[1][r] as u8 + board[2][r] as u8 + board[3][r] as u8;
+            board[0][r] as u8 +
+            board[1][r] as u8 +
+            board[2][r] as u8 +
+            board[3][r] as u8;
         if count == 2 {
             rank = (r - 1) as u8;
             break;
@@ -220,13 +244,16 @@ fn pair(board: &BoardArr) -> Option<Hand> {
     if rank != 0xFF {
         let mut kickers: Vec<u8> = Vec::with_capacity(2);
         for r in (1..14).rev() {
-            if (r - 1) as u8 != rank && (board[0][r] || board[1][r] || board[2][r] || board[3][r]) {
+            if (r - 1) as u8 != rank &&
+                board[0][r] || board[1][r] || board[2][r] || board[3][r]
+            {
                 kickers.push((r - 1) as u8);
                 if kickers.len() == 3 {
                     kickers.reverse();
+
                     return Some(Hand {
-                        hand_type: 1,
-                        hand_rank: rank,
+                        htype: 1,
+                        hrank: rank,
                         kickers: kickers,
                     });
                 }
@@ -238,6 +265,7 @@ fn pair(board: &BoardArr) -> Option<Hand> {
 
 pub fn high_card(board: &BoardArr) -> Option<Hand> {
     let mut kickers: Vec<u8> = Vec::with_capacity(2);
+
     for r in (1..14).rev() {
         if board[0][r] || board[1][r] || board[2][r] || board[3][r] {
             kickers.push((r - 1) as u8);
@@ -249,8 +277,8 @@ pub fn high_card(board: &BoardArr) -> Option<Hand> {
     kickers.reverse();
 
     return Some(Hand {
-        hand_type: 0,
-        hand_rank: 0,
+        htype: 0,
+        hrank: 0,
         kickers: kickers,
     });
 }
