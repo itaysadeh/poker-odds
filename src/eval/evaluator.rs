@@ -10,3 +10,9 @@ pub fn score_hand(hand: &hand::Hand) -> u32 {
 
     return score;
 }
+
+pub fn get_hand() -> hand::Hand {
+    
+
+    todo!();
+}

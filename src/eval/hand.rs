@@ -27,7 +27,7 @@ pub fn cards_to_boardarr(cards: &Vec<u8>) -> BoardArr {
     return boardarr;
 }
 
-fn straight_flush(board: &BoardArr) -> Option<Hand> {
+pub fn straight_flush(board: &BoardArr) -> Option<Hand> {
     for r in (4..14).rev() {
         for s in 0..4 {
             if 
@@ -48,7 +48,7 @@ fn straight_flush(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn four_of_a_kind(board: &BoardArr) -> Option<Hand> {
+pub fn four_of_a_kind(board: &BoardArr) -> Option<Hand> {
     let mut rank: u8 = 0xFF;
 
     for r in (1..14).rev() {
@@ -74,7 +74,7 @@ fn four_of_a_kind(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn full_house(board: &BoardArr) -> Option<Hand> {
+pub fn full_house(board: &BoardArr) -> Option<Hand> {
     let mut rank: u8 = 0xFF;
 
     for r in (1..14).rev() {
@@ -112,7 +112,7 @@ fn full_house(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn flush(board: &BoardArr) -> Option<Hand> {
+pub fn flush(board: &BoardArr) -> Option<Hand> {
     let mut kickers: Vec<u8> = Vec::with_capacity(5);
 
     for s in 0..4 {
@@ -135,7 +135,7 @@ fn flush(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn straight(board: &BoardArr) -> Option<Hand> {
+pub fn straight(board: &BoardArr) -> Option<Hand> {
     for r in (4..14).rev() {
         if 
             (board[0][r-0] || board[1][r-0] || board[2][r-0] || board[3][r-0]) &&
@@ -154,7 +154,7 @@ fn straight(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn three_of_a_kind(board: &BoardArr) -> Option<Hand> {
+pub fn three_of_a_kind(board: &BoardArr) -> Option<Hand> {
     let mut rank: u8 = 0xFF;
 
     for r in (1..14).rev() {
@@ -191,7 +191,7 @@ fn three_of_a_kind(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn two_pair(board: &BoardArr) -> Option<Hand> {
+pub fn two_pair(board: &BoardArr) -> Option<Hand> {
     let mut pairs: Vec<u8> = Vec::with_capacity(2);
 
     for r in (1..14).rev() {
@@ -226,7 +226,7 @@ fn two_pair(board: &BoardArr) -> Option<Hand> {
     return None;
 }
 
-fn pair(board: &BoardArr) -> Option<Hand> {
+pub fn pair(board: &BoardArr) -> Option<Hand> {
     let mut rank: u8 = 0xFF;
 
     for r in (1..14).rev() {
